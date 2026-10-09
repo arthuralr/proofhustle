@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { caseStudySchema, type CaseStudyInput } from "@/lib/validations/case-study";
+import { supabase } from "@/lib/supabase";
 
 interface HustleCardData {
   id: string;
@@ -21,43 +22,43 @@ interface HustleCardData {
   tools: string[];
 }
 
-const INITIAL_CASES: HustleCardData[] = [
-  {
-    id: "1",
-    title: "Micro-SaaS com Template Notion + Make.com",
-    category: "DIGITAL PRODUCTS_SAAS",
-    author: "Diogo Silva",
-    reputation: 98,
-    initialInvestment: 45,
-    revenue: 1850,
-    netProfit: 1785,
-    timeInvestedHours: 35,
-    roi: 3967,
-    hourlyRate: 51,
-    verified: true,
-    tools: ["Notion", "Stripe", "Make.com"],
-  },
-  {
-    id: "2",
-    title: "Venda de Plantas Raras via Instagram Local",
-    category: "PHYSICAL BUSINESS",
-    author: "Mariana Costa",
-    reputation: 92,
-    initialInvestment: 200,
-    revenue: 1100,
-    netProfit: 850,
-    timeInvestedHours: 22,
-    roi: 425,
-    hourlyRate: 38.64,
-    verified: true,
-    tools: ["Instagram", "WhatsApp Business", "Canva"],
-  },
-];
-
 export default function Home() {
-  const [cases, setCases] = useState<HustleCardData[]>(INITIAL_CASES);
+  const [cases, setCases] = useState<HustleCardData[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "verified" | "high_roi">("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const fetchCases = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("case_studies")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (!error && data) {
+      const mapped = data.map((item: any) => ({
+        id: item.id,
+        title: item.title,
+        category: item.category,
+        author: item.author,
+        reputation: item.reputation,
+        initialInvestment: Number(item.initial_investment),
+        revenue: Number(item.revenue),
+        netProfit: Number(item.net_profit),
+        timeInvestedHours: Number(item.time_invested_hours),
+        roi: Number(item.roi),
+        hourlyRate: Number(item.hourly_rate),
+        verified: item.verified,
+        tools: item.tools || [],
+      }));
+      setCases(mapped);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchCases();
+  }, []);
 
   const {
     register,
@@ -78,34 +79,33 @@ export default function Home() {
     },
   });
 
-  const onSubmit = (data: CaseStudyInput) => {
-    const netProfit = Number(data.netProfit);
-    const initialInvestment = Number(data.initialInvestment);
-    const revenue = Number(data.revenue);
-    const hours = Number(data.timeInvestedHours) || 1;
+  const onSubmit = async (data: CaseStudyInput) => {
+    const toolsArray = data.toolsUsed
+      ? data.toolsUsed.split(",").map((t) => t.trim()).filter(Boolean)
+      : [];
 
-    const roi = initialInvestment > 0 ? Math.round(((revenue - initialInvestment) / initialInvestment) * 100) : 100;
-    const hourlyRate = Number((netProfit / hours).toFixed(2));
+    const { error } = await supabase.from("case_studies").insert([
+      {
+        title: data.title,
+        category: data.category,
+        author: "Comunidade",
+        reputation: 100,
+        initial_investment: Number(data.initialInvestment),
+        revenue: Number(data.revenue),
+        net_profit: Number(data.netProfit),
+        time_invested_hours: Number(data.timeInvestedHours),
+        tools: toolsArray,
+        description: data.description,
+      },
+    ]);
 
-    const newCase: HustleCardData = {
-      id: Date.now().toString(),
-      title: data.title,
-      category: data.category,
-      author: "Você",
-      reputation: 100,
-      initialInvestment,
-      revenue,
-      netProfit,
-      timeInvestedHours: hours,
-      roi,
-      hourlyRate,
-      verified: false,
-      tools: data.toolsUsed ? data.toolsUsed.split(",").map((t) => t.trim()) : [],
-    };
-
-    setCases((prev) => [newCase, ...prev]);
-    reset();
-    setIsModalOpen(false);
+    if (!error) {
+      await fetchCases();
+      reset();
+      setIsModalOpen(false);
+    } else {
+      alert("Erro ao gravar estudo: " + error.message);
+    }
   };
 
   const filteredCases = cases.filter((item) => {
@@ -168,68 +168,78 @@ export default function Home() {
       </section>
 
       <section className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
-        {filteredCases.map((item) => (
-          <div
-            key={item.id}
-            className="bg-[#091122]/90 border border-slate-800/90 hover:border-slate-700/80 transition-all rounded-2xl p-6 relative flex flex-col justify-between"
-          >
-            <div>
-              <div className="flex items-center justify-between gap-2 mb-3">
-                <span className="text-[11px] font-mono tracking-wider text-slate-400 bg-slate-800/50 px-2 py-0.5 rounded border border-slate-700/50">
-                  {item.category}
-                </span>
-                {item.verified ? (
-                  <span className="text-xs text-emerald-400 flex items-center gap-1">
-                    🛡 Verificado
-                  </span>
-                ) : (
-                  <span className="text-xs text-amber-400 flex items-center gap-1">
-                    ⏳ Em auditoria
-                  </span>
-                )}
-              </div>
-
-              <h2 className="text-xl font-bold text-slate-100">{item.title}</h2>
-              <p className="text-xs text-slate-400 mt-1">
-                Por {item.author} • Reputação {item.reputation}
-              </p>
-
-              <div className="grid grid-cols-3 gap-3 bg-[#0c162c] p-3 rounded-xl mt-5 border border-slate-800/80">
-                <div>
-                  <span className="text-[10px] text-slate-400 block tracking-wider uppercase">Investido</span>
-                  <span className="font-semibold text-slate-200">€{item.initialInvestment.toFixed(2)}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-400 block tracking-wider uppercase">Receita Bruta</span>
-                  <span className="font-semibold text-slate-200">€{item.revenue.toFixed(2)}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-400 block tracking-wider uppercase">Lucro Líquido</span>
-                  <span className="font-semibold text-emerald-400">€{item.netProfit.toFixed(2)}</span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-4 text-xs text-slate-400 mt-4">
-                <span>⏱ {item.timeInvestedHours}h gastas</span>
-                <span>📈 €{item.hourlyRate}/h</span>
-                <span className="text-emerald-400 font-semibold">ROI: {item.roi}%</span>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-800/80">
-              <div className="flex gap-1.5 flex-wrap">
-                {item.tools.map((tool) => (
-                  <span key={tool} className="text-[11px] bg-slate-800/80 text-slate-300 px-2 py-0.5 rounded">
-                    {tool}
-                  </span>
-                ))}
-              </div>
-              <button className="text-xs text-slate-400 hover:text-emerald-400 transition">
-                Auditar provas ↗
-              </button>
-            </div>
+        {loading ? (
+          <div className="col-span-2 text-center py-12 text-slate-500">
+            A carregar casos da base de dados...
           </div>
-        ))}
+        ) : filteredCases.length === 0 ? (
+          <div className="col-span-2 text-center py-12 text-slate-500">
+            Nenhum estudo de caso encontrado.
+          </div>
+        ) : (
+          filteredCases.map((item) => (
+            <div
+              key={item.id}
+              className="bg-[#091122]/90 border border-slate-800/90 hover:border-slate-700/80 transition-all rounded-2xl p-6 relative flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <span className="text-[11px] font-mono tracking-wider text-slate-400 bg-slate-800/50 px-2 py-0.5 rounded border border-slate-700/50">
+                    {item.category}
+                  </span>
+                  {item.verified ? (
+                    <span className="text-xs text-emerald-400 flex items-center gap-1">
+                      🛡 Verificado
+                    </span>
+                  ) : (
+                    <span className="text-xs text-amber-400 flex items-center gap-1">
+                      ⏳ Em auditoria
+                    </span>
+                  )}
+                </div>
+
+                <h2 className="text-xl font-bold text-slate-100">{item.title}</h2>
+                <p className="text-xs text-slate-400 mt-1">
+                  Por {item.author} • Reputação {item.reputation}
+                </p>
+
+                <div className="grid grid-cols-3 gap-3 bg-[#0c162c] p-3 rounded-xl mt-5 border border-slate-800/80">
+                  <div>
+                    <span className="text-[10px] text-slate-400 block tracking-wider uppercase">Investido</span>
+                    <span className="font-semibold text-slate-200">€{item.initialInvestment.toFixed(2)}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 block tracking-wider uppercase">Receita Bruta</span>
+                    <span className="font-semibold text-slate-200">€{item.revenue.toFixed(2)}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 block tracking-wider uppercase">Lucro Líquido</span>
+                    <span className="font-semibold text-emerald-400">€{item.netProfit.toFixed(2)}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-4 text-xs text-slate-400 mt-4">
+                  <span>⏱ {item.timeInvestedHours}h gastas</span>
+                  <span>📈 €{item.hourlyRate}/h</span>
+                  <span className="text-emerald-400 font-semibold">ROI: {item.roi}%</span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-800/80">
+                <div className="flex gap-1.5 flex-wrap">
+                  {item.tools.map((tool) => (
+                    <span key={tool} className="text-[11px] bg-slate-800/80 text-slate-300 px-2 py-0.5 rounded">
+                      {tool}
+                    </span>
+                  ))}
+                </div>
+                <button className="text-xs text-slate-400 hover:text-emerald-400 transition">
+                  Auditar provas ↗
+                </button>
+              </div>
+            </div>
+          ))
+        )}
       </section>
 
       {isModalOpen && (
@@ -328,9 +338,9 @@ export default function Home() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="bg-[#00E599] hover:bg-[#00c984] text-black font-semibold px-4 py-2 rounded-lg"
+                  className="bg-[#00E599] hover:bg-[#00c984] text-black font-semibold px-4 py-2 rounded-lg disabled:opacity-50"
                 >
-                  Guardar Estudo
+                  {isSubmitting ? "A guardar..." : "Guardar Estudo"}
                 </button>
               </div>
             </form>
