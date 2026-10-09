@@ -7,7 +7,7 @@ export const caseStudySchema = z.object({
   revenue: z.coerce.number().min(0, "A receita bruta deve ser igual ou superior a 0"),
   netProfit: z.coerce.number().min(0, "O lucro líquido deve ser igual ou superior a 0"),
   timeInvestedHours: z.coerce.number().min(1, "Indique o tempo investido em horas"),
-  toolsUsed: z.string().optional(),
+  toolsUsed: z.string().default(""),
   description: z.string().min(20, "Forneça uma descrição detalhada com pelo menos 20 caracteres"),
 });
 
