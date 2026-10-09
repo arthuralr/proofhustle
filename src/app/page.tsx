@@ -81,7 +81,7 @@ export default function SubstackFeed() {
       .eq("id", id);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+ const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
 
@@ -94,8 +94,9 @@ export default function SubstackFeed() {
     const { error } = await supabase.from("case_studies").insert([
       {
         title,
-        subtitle,
-        content,
+        subtitle: subtitle || title,
+        content: content || subtitle || title,
+        description: content || subtitle || title,
         category,
         author: "Membro da Rede",
         initial_investment: inv,
@@ -103,24 +104,29 @@ export default function SubstackFeed() {
         net_profit: net,
         time_invested_hours: h,
         tools: toolsArr,
-        description: subtitle || title,
         validation_status: "pending",
         likes_count: 0,
         community_votes_legit: 0,
       },
     ]);
 
-    if (!error) {
-      setIsModalOpen(false);
-      setTitle("");
-      setSubtitle("");
-      setContent("");
-      setInvestment("");
-      setRevenue("");
-      setHours("");
-      setTools("");
-      fetchPosts();
+    if (error) {
+      alert("Erro ao publicar: " + error.message);
+      setSubmitting(false);
+      return;
     }
+
+    setIsModalOpen(false);
+    setTitle("");
+    setSubtitle("");
+    setContent("");
+    setInvestment("");
+    setRevenue("");
+    setHours("");
+    setTools("");
+    setSubmitting(false);
+    await fetchPosts();
+  };
     setSubmitting(false);
   };
 
