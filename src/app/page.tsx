@@ -30,7 +30,7 @@ export default function SubstackFeed() {
   const [activeTab, setActiveTab] = useState<"feed" | "verified" | "trending">("feed");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Form states
+  // Estados do formulário
   const [title, setTitle] = useState("");
   const [subtitle, setSubtitle] = useState("");
   const [content, setContent] = useState("");
@@ -59,7 +59,6 @@ export default function SubstackFeed() {
   }, []);
 
   const handleLike = async (id: string, currentLikes: number) => {
-    // Atualização otimista
     setPosts((prev) =>
       prev.map((p) => (p.id === id ? { ...p, likes_count: (p.likes_count || 0) + 1 } : p))
     );
@@ -81,7 +80,7 @@ export default function SubstackFeed() {
       .eq("id", id);
   };
 
- const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
 
@@ -89,7 +88,7 @@ export default function SubstackFeed() {
     const rev = parseFloat(revenue) || 0;
     const net = rev - inv;
     const h = parseFloat(hours) || 1;
-    const toolsArr = tools ? tools.split(",").map((t) => t.trim()) : [];
+    const toolsArr = tools ? tools.split(",").map((t) => t.trim()).filter(Boolean) : [];
 
     const { error } = await supabase.from("case_studies").insert([
       {
@@ -127,8 +126,6 @@ export default function SubstackFeed() {
     setSubmitting(false);
     await fetchPosts();
   };
-    setSubmitting(false);
-  };
 
   const filteredPosts = posts.filter((post) => {
     if (activeTab === "verified") {
@@ -145,7 +142,7 @@ export default function SubstackFeed() {
       case "verified_team":
         return (
           <span className="inline-flex items-center gap-1 bg-emerald-950/60 border border-emerald-500/30 text-emerald-400 text-xs px-2.5 py-1 rounded-full font-medium">
-            ✓ Validado pela Equipe
+            ✓ Validado pela Equipa
           </span>
         );
       case "verified_community":
@@ -165,7 +162,6 @@ export default function SubstackFeed() {
 
   return (
     <div className="min-h-screen bg-[#0d1117] text-slate-100 font-sans">
-      {/* Header Estilo Substack / Medium */}
       <header className="border-b border-slate-800 bg-[#161b22]/70 backdrop-blur sticky top-0 z-40">
         <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -185,11 +181,10 @@ export default function SubstackFeed() {
         </div>
       </header>
 
-      {/* Hero & Abas */}
       <main className="max-w-3xl mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl sm:text-4xl font-serif font-bold text-slate-50 tracking-tight">
-            Descubra o que realmente está gerando renda.
+            Descubra o que realmente está a gerar rendimento.
           </h1>
           <p className="text-slate-400 text-sm sm:text-base mt-2">
             Publicações detalhadas, números abertos e validação mútua sem promessas vazias.
@@ -229,16 +224,14 @@ export default function SubstackFeed() {
           </div>
         </div>
 
-        {/* Feed de Posts */}
         {loading ? (
-          <div className="py-16 text-center text-slate-500 text-sm">Carregando publicações...</div>
+          <div className="py-16 text-center text-slate-500 text-sm">A carregar publicações...</div>
         ) : filteredPosts.length === 0 ? (
           <div className="py-16 text-center text-slate-500 text-sm">Nenhuma publicação encontrada.</div>
         ) : (
           <div className="divide-y divide-slate-800/80">
             {filteredPosts.map((post) => (
               <article key={post.id} className="py-8 space-y-4">
-                {/* Meta Autor e Selo */}
                 <div className="flex items-center justify-between flex-wrap gap-2 text-xs">
                   <div className="flex items-center gap-2 text-slate-400">
                     <span className="font-semibold text-slate-200">{post.author}</span>
@@ -250,7 +243,6 @@ export default function SubstackFeed() {
                   {renderBadge(post.validation_status)}
                 </div>
 
-                {/* Título e Subtítulo Editorial */}
                 <div>
                   <h2 className="text-xl sm:text-2xl font-bold text-slate-100 hover:text-emerald-400 transition cursor-pointer font-serif">
                     {post.title}
@@ -262,7 +254,6 @@ export default function SubstackFeed() {
                   )}
                 </div>
 
-                {/* Bloco de Métricas do Negócio (Estilo Destaque) */}
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 bg-[#161b22] border border-slate-800 rounded-xl p-3.5 text-center text-xs">
                   <div>
                     <span className="text-slate-500 block text-[10px] uppercase font-semibold">Investimento</span>
@@ -271,7 +262,7 @@ export default function SubstackFeed() {
                     </span>
                   </div>
                   <div>
-                    <span className="text-slate-500 block text-[10px] uppercase font-semibold">Faturamento</span>
+                    <span className="text-slate-500 block text-[10px] uppercase font-semibold">Faturação</span>
                     <span className="text-slate-200 font-semibold mt-0.5 block">
                       R$ {Number(post.revenue).toFixed(2)}
                     </span>
@@ -290,14 +281,12 @@ export default function SubstackFeed() {
                   </div>
                 </div>
 
-                {/* Conteúdo Excertado */}
                 {post.content && (
                   <p className="text-slate-400 text-xs sm:text-sm line-clamp-3 leading-relaxed">
                     {post.content}
                   </p>
                 )}
 
-                {/* Tags de Ferramentas */}
                 {post.tools && post.tools.length > 0 && (
                   <div className="flex gap-1.5 flex-wrap pt-1">
                     {post.tools.map((t) => (
@@ -308,7 +297,6 @@ export default function SubstackFeed() {
                   </div>
                 )}
 
-                {/* Barra Social de Ações */}
                 <div className="flex items-center justify-between pt-3 text-xs text-slate-400">
                   <div className="flex items-center gap-5">
                     <button
@@ -316,9 +304,6 @@ export default function SubstackFeed() {
                       className="flex items-center gap-1.5 hover:text-emerald-400 transition"
                     >
                       ❤️ <span>{post.likes_count || 0}</span>
-                    </button>
-                    <button className="flex items-center gap-1.5 hover:text-emerald-400 transition">
-                      💬 <span>Comentários</span>
                     </button>
                   </div>
 
@@ -337,7 +322,6 @@ export default function SubstackFeed() {
         )}
       </main>
 
-      {/* Modal: Escrever Publicação / Oportunidade */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-[#161b22] border border-slate-800 w-full max-w-xl rounded-2xl p-6 shadow-2xl my-8">
@@ -440,7 +424,7 @@ export default function SubstackFeed() {
                   rows={4}
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
-                  placeholder="Conte como fez: como conseguiu o primeiro cliente, quanto tempo levou, quais foram os erros e como outras pessoas podem reproduzir..."
+                  placeholder="Conte como fez: primeiro cliente, tempo investido e como outros podem replicar..."
                   className="w-full bg-[#0d1117] border border-slate-700 rounded-lg p-2.5 text-white outline-none focus:border-emerald-500"
                 />
               </div>
